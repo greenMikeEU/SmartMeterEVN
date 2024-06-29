@@ -30,12 +30,31 @@ if not os.access(configFile, os.R_OK):
 config = json.load(open(configFile))
 
 # Überprüfung ob alle Daten in der Config vorhanden sind
-neededConfig = ['port', 'baudrate', 'key', 'printValue', 'useMQTT', 'mqttbrokerip', 'mqttbrokerport', 'mqttbrokeruser', 'mqttbrokerpasswort', 'useInfluxdb', 'influxdbip', 'influxdbport']
+neededConfig = [
+        'port', 'baudrate', 'key', 'printValue',
+        'useMQTT', 'mqttbrokerip', 'mqttbrokerport', 'mqttbrokeruser', 'mqttbrokerpasswort',
+        'useInfluxdb', 'influxdbip', 'influxdbport',
+        'useREST'
+]
 for conf in neededConfig:
+    confErr = False
     if conf not in config:
         print(conf + ' Fehlt im Configfile!')
-        sys.exit(3)
+        confErr = True
+# Wenn ein Wert fehlt, alle ausgeben und dann beenden...
+if confErr:
+    sys.exit(3)
 
+RESTneededConfig = ['meter', 'RESTurl', 'RESTuser', 'RESTpass']
+if config['useREST']:
+    confErr = False
+    for conf in RESTneededConfig:
+        if conf not in config:
+            print(conf + ' missing in config file!')
+            confErr = True
+    # Wenn ein Wert fehlt, alle ausgeben und dann beenden...
+    if confErr:
+        sys.exit(4)
 
 
 #Schlüssel eingeben zB. "36C66639E48A8CA4D6BC8B282A793BBB"
@@ -90,6 +109,10 @@ if useinfluxdb:
         print("Fehler: ", format(err))
         sys.exit()
     
+# REST API Init
+if config['useREST']:
+    import requests
+    from requests.auth import HTTPBasicAuth
 
 # Werte im XML File
 octet_string_values = {}
@@ -291,4 +314,30 @@ while 1:
         print()
         print("Fehler: ", format(err))
         sys.exit()
+
+
+    # REST API
+    if config['useREST']:
+        dataJson = {'meter': config['meter'], 'data': {}}
+        dataJson['data']['WirkenergieP'] = WirkenergieP
+        dataJson['data']['WirkenergieN'] = WirkenergieN
+        dataJson['data']['MomentanleistungP'] = MomentanleistungP
+        dataJson['data']['MomentanleistungN'] = MomentanleistungN
+        dataJson['data']['SpannungL1'] = SpannungL1
+        dataJson['data']['SpannungL2'] = SpannungL2
+        dataJson['data']['SpannungL3'] = SpannungL3
+        dataJson['data']['StromL1'] = StromL1
+        dataJson['data']['StromL2'] = StromL2
+        dataJson['data']['StromL3'] = StromL3
+        dataJson['data']['Leistungsfaktor'] = Leistungsfaktor
+        jsonStr = json.dumps(dataJson)
+
+        url = config['RESTurl']
+
+        resp = requests.post(url, data=jsonStr, auth=HTTPBasicAuth(config['RESTuser'], config['RESTpass']))
+        if resp.status_code != 200:
+            print('Error while sending to REST API:')
+            print(jsonStr)
+            print('Status Code: ' + str(resp.status_code))
+            print(resp.text)
 

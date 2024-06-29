@@ -10,5 +10,10 @@
     "mqttbrokerpasswort": "",
     "useInfluxdb": false,
     "influxdbip": "",
-    "influxdbport":"" 
+    "influxdbport":"",
+    "useREST": false,
+    "meter": "1234567890",
+    "RESTurl": "https://my.host.at/send/to/API",
+    "RESTuser": "username",
+    "RESTpass": "###PASSWORD###"
 }
